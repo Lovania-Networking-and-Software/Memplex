@@ -13,9 +13,11 @@
 #  limitations under the License.
 # ===========================================================================
 import unittest
-from memplex import layers
+
 import numpy as np
 import tensorflow as tf
+
+from memplex import layers
 
 
 class LabelerTest(unittest.TestCase):
