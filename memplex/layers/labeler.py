@@ -54,7 +54,8 @@ class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
         :param name: Name of the layer
         """
         super().__init__(False, name)
-        self.pooling_max = tf.keras.layers.GlobalMaxPooling1D(name="pooling_space_max", keepdims=True)
+        self.pooling_max = tf.keras.layers.GlobalMaxPooling1D(name="pooling_space_max",
+                                                              keepdims=True)
         self.pooling_average = tf.keras.layers.GlobalAveragePooling1D(
             name="pooling_space_average", keepdims=True)
 
@@ -67,7 +68,8 @@ class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """
-        Pools the data with 2 different methods, then averages the two different data from 2 different methods,
+        Pools the data with 2 different methods,
+        then averages the two different data from 2 different methods,
         then sums them, then average the average and aggregated data and sums,
         then again averages and sums the average and aggregated data, then combines them.
         :param inputs: Input tensor
@@ -103,13 +105,17 @@ class Labeler(tf.Module):
         """
         super().__init__(name=name)
         self.space_creator = PoolingAndAverageBasedSpaceCreatorLayer()
-        self.fourier_features = tf.keras.layers.experimental.RandomFourierFeatures(128, "gaussian", 4.,
-                                                                                   False, "feauture_space_projector")
+        self.fourier_features = tf.keras.layers.experimental.RandomFourierFeatures(128, "gaussian",
+                                                                                   4.,
+                                                                                   False,
+                                                                                   "feauture_space_"
+                                                                                   "projector")
         self.linear = tf.keras.layers.PReLU(name="linear_space")
 
     def __call__(self, inputs):
         """
-        Creates super soft space with inputs, projects them to 128 dim feature space and applies linear activations.
+        Creates super soft space with inputs,
+        projects them to 128 dim feature space and applies linear activations.
         :param inputs: Input tensor
         :return: Output tensor
         """
