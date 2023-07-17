@@ -20,7 +20,7 @@ class RoundedNorm(tf.keras.layers.Wrapper):
     Rounds and normalizes the data.
     """
 
-    def __init__(self, layer, name="rounded_norm"):
+    def __init__(self, layer, name: str = "rounded_norm"):
         """
         Initializes normalization layer.
         :param layer: Layer to be wrapped
@@ -98,7 +98,7 @@ class Labeler(tf.Module):
     Labeles the data.
     """
 
-    def __init__(self, name="labeler"):
+    def __init__(self, name: str = "labeler"):
         """
         Initializes layers and base class.
         :param name: Name of Labeler module
@@ -112,7 +112,7 @@ class Labeler(tf.Module):
                                                                                    "projector")
         self.linear = tf.keras.layers.PReLU(name="linear_space")
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
         """
         Creates super soft space with inputs,
         projects them to 128 dim feature space and applies linear activations.
