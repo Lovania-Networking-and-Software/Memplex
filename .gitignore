@@ -110,3 +110,4 @@ bazel.py
 /bazel-out/
 /bazel-testlogs/
 /.ijwb/
+/bazel-bin/

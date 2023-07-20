@@ -14,7 +14,6 @@
 # ===========================================================================
 import unittest
 
-import numpy as np
 import tensorflow as tf
 
 from memplex import layers
@@ -23,10 +22,9 @@ from memplex import layers
 class LabelerTest(unittest.TestCase):
     def test_labeler(self):
         labeler = layers.Labeler()
-        base_data = np.random.rand(3, 3, 3)
-        data1 = np.copy(base_data)
-        data2 = np.copy(base_data)
-        data2 += np.random.normal(0, 0.4, size=(3, 3, 3))
+        base_data = tf.random.uniform((3, 3, 3))
+        data1 = tf.identity(base_data)
+        data2 = tf.identity(base_data) + tf.random.normal((3, 3, 3), mean=0.0, stddev=0.4)
         self.assertEqual(tf.reduce_mean(labeler(data1)), tf.reduce_mean(labeler(data2)))
 
 

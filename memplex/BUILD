@@ -8,6 +8,8 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(["LICENSE"])
+
 config_setting(
     name = "no_memplex_py_deps",
     define_values = {"no_memplex_py_deps": "true"},
@@ -21,6 +23,14 @@ py_library(
     ],
     srcs_version = "PY3",
     deps = [
+        ":errors",
         "//memplex/layers",
+    ],
+)
+
+py_library(
+    name = "errors",
+    srcs = [
+        "errors.py",
     ],
 )
