@@ -186,30 +186,3 @@ class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
         filtered_space = tf.boolean_mask(base_space, tf.not_equal(base_space, 0))
 
         return self.flatten(filtered_space)
-
-
-class BeamSearch(tf.keras.layers.Layer):
-    """
-    Applies beam search algotihm to data.
-    Args:
-        beam_width: An int scalar >= 0 (beam search beam width).
-        top_paths: An int scalar >= 0, <= beam_width (controls output size).
-        name: Name of layer.
-    """
-
-    def __init__(self, beam_width, top_paths, name="beam_search_space"):
-        super().__init__(name=name, trainable=False)
-        self.beam_width = beam_width
-        self.top_paths = top_paths
-
-    def call(self, inputs, **kwargs) -> tf.Tensor:
-        if kwargs.get("training"):
-            raise NonTrainablePart(self)
-        beam, log_probs = tf.nn.ctc_beam_search_decoder(
-            inputs=inputs,
-            sequence_length=tf.fill([inputs.shape[0]], inputs.shape[2]),
-            beam_width=128,
-            top_paths=1
-        )
-        beam = tf.cast(tf.reshape(tf.sparse.to_dense(beam[0]), (1, 1, -1)), tf.float32) * log_probs
-        return beam

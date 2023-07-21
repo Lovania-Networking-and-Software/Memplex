@@ -20,7 +20,7 @@ Labeler Model.
 import tensorflow as tf
 
 from memplex.errors import NonTrainablePart
-from memplex.layers import BeamSearch, NonTrainablePReLU, \
+from memplex.layers import NonTrainablePReLU, \
     PoolingAndAverageBasedSpaceCreatorLayer
 
 
@@ -40,7 +40,6 @@ class Labeler(tf.keras.Model):
                                                                                    "feature_space_"
                                                                                    "projector")
         self.linear = NonTrainablePReLU(name="non-trainable_linear_space")
-        self.beam_search = BeamSearch(128, 1)
 
     def fit(
             self,
@@ -69,9 +68,7 @@ class Labeler(tf.keras.Model):
     def call(self, inputs, **kwargs) -> tf.Tensor:
         if kwargs.get("training"):
             raise NonTrainablePart(self)
-        beam = self.beam_search(inputs)
-
-        space = self.space_creator(beam)
+        space = self.space_creator(inputs)
 
         feature_space = tf.round(self.fourier_features(space))
 
