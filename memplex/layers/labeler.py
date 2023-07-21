@@ -12,6 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ===========================================================================
+
+"""
+Lauers for Labeler model.
+"""
+
 import tensorflow as tf
 from tensorflow.python.keras import backend, constraints, initializers, regularizers
 from tensorflow.python.keras.utils import tf_utils
@@ -171,11 +176,11 @@ class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
         average = self.average([pooled_space_max, pooled_space_average])
         inputs = self.add([pooled_space_average, pooled_space_max])
 
-        average = self.average([average, inputs])
+        average2 = self.average([average, inputs])
         inputs = self.add([average, inputs])
 
-        average = self.average([inputs, average])
-        inputs = self.add([inputs, average])
+        average = self.average([inputs, average2])
+        inputs = self.add([inputs, average2])
 
         base_space = tf.round(self.concatenate([inputs, average]))
         filtered_space = tf.boolean_mask(base_space, tf.not_equal(base_space, 0))
@@ -183,27 +188,21 @@ class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
         return self.flatten(filtered_space)
 
 
-class Labeler(tf.keras.Model):
+class BeamSearch(tf.keras.layers.Layer):
     """
-    Labels the data.
+    Applies beam search algotihm to data.
     Args:
-        name: Name of Labeler module
+        beam_width: An int scalar >= 0 (beam search beam width).
+        top_paths: An int scalar >= 0, <= beam_width (controls output size).
+        name: Name of layer.
     """
 
-    def __init__(self, name="labeler"):
+    def __init__(self, beam_width, top_paths, name="beam_search_space"):
         super().__init__(name=name, trainable=False)
-        self.space_creator = PoolingAndAverageBasedSpaceCreatorLayer()
-        self.fourier_features = tf.keras.layers.experimental.RandomFourierFeatures(128, "gaussian",
-                                                                                   4.,
-                                                                                   False,
-                                                                                   "feature_space"
-                                                                                   "projector")
-        self.linear = NonTrainablePReLU(name="non-trainable_linear_space")
+        self.beam_width = beam_width
+        self.top_paths = top_paths
 
-    def fit(self):
-        raise NonTrainablePart(self)
-
-    def __call__(self, inputs, **kwargs) -> tf.Tensor:
+    def call(self, inputs, **kwargs) -> tf.Tensor:
         if kwargs.get("training"):
             raise NonTrainablePart(self)
         beam, log_probs = tf.nn.ctc_beam_search_decoder(
@@ -212,12 +211,5 @@ class Labeler(tf.keras.Model):
             beam_width=128,
             top_paths=1
         )
-        beam = tf.reshape(tf.sparse.to_dense(beam[0]), (1, 1, -1))
-
-        space = self.space_creator(tf.cast(beam, tf.float32) * log_probs)
-
-        feature_space = tf.round(self.fourier_features(space))
-
-        linear_data = self.linear(feature_space)
-
-        return linear_data
+        beam = tf.cast(tf.reshape(tf.sparse.to_dense(beam[0]), (1, 1, -1)), tf.float32) * log_probs
+        return beam

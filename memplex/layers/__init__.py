@@ -16,4 +16,6 @@
 """
 Layers for Memplex main model
 """
-from memplex.layers.labeler import Labeler
+
+from memplex.layers.labeler import BeamSearch, NonTrainablePReLU, \
+    PoolingAndAverageBasedSpaceCreatorLayer

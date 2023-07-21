@@ -6,19 +6,31 @@ package(
 )
 
 py_library(
-    name = "layers",
+    name = "models",
     srcs = [
         "__init__.py",
     ],
     srcs_version = "PY3",
     deps = [
-        ":labeler_layers",
+        ":labeler",
         "//memplex:errors",
     ],
 )
 
 py_library(
-    name = "labeler_layers",
+    name = "labeler",
     srcs = ["labeler.py"],
     srcs_version = "PY3",
+    deps = [
+        "//memplex/layers",
+    ],
+)
+
+py_test(
+    name = "labeler_test",
+    size = "small",
+    srcs = ["labeler_test.py"],
+    deps = [
+        ":models",
+    ],
 )

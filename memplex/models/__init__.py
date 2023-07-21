@@ -16,3 +16,5 @@
 """
 Models for Memplex
 """
+
+from memplex.models.labeler import Labeler

@@ -25,6 +25,7 @@ py_library(
     deps = [
         ":errors",
         "//memplex/layers",
+        "//memplex/models",
     ],
 )
 
