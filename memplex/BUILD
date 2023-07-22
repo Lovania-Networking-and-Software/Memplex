@@ -26,6 +26,7 @@ py_library(
         ":errors",
         "//memplex/layers",
         "//memplex/models",
+        "//memplex/utils",
     ],
 )
 
