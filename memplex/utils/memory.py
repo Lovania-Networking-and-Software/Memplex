@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ===========================================================================
+
 import sys
 from collections import deque
 from typing import Any, Iterator
@@ -23,21 +24,22 @@ from safetensors.tensorflow import save_file
 
 class Sizes:
     KB: int = 1024
-    MB: int = 1024 * 1024
-    GB: int = 1024 * 1024 * 1024
+    MB: int = KB * 1024
+    GB: int = MB * 1024
+    TB: int = GB * 1024
 
 
 class Memory:
-    def __init__(self, memory_size_treshold: int = 1 * Sizes.GB,
+    def __init__(self, memory_size_threshold: int = 1 * Sizes.GB,
                  filename: str = "experience.safetensors"):
         self._filename = filename
-        self._memory_size_treshold = memory_size_treshold
-        self._capacity = memory_size_treshold
+        self._memory_size_threshold = memory_size_threshold
+        self._capacity = memory_size_threshold
         self._queue = deque()
         self._data = dict[str, tf.Tensor]()
 
     def __getitem__(self, key) -> tf.Tensor:
-        with tf.GradientTape() as tp:
+        with tf.GradientTape():
             try:
                 if key in self._data.keys():
                     self._queue.remove(key)
@@ -55,7 +57,7 @@ class Memory:
             return res
 
     def __setitem__(self, key, value):
-        with tf.GradientTape() as tp:
+        with tf.GradientTape():
             try:
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
@@ -79,7 +81,7 @@ class Memory:
                 save_file(self._data, self._filename)
 
     def __delitem__(self, key):
-        with tf.GradientTape() as tp:
+        with tf.GradientTape():
             try:
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
@@ -98,7 +100,7 @@ class Memory:
 
     def __iter__(self) -> Iterator[Any] | Any:
         try:
-            with tf.GradientTape() as tp:
+            with tf.GradientTape():
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
                     for k in f.keys():
@@ -109,7 +111,7 @@ class Memory:
 
     def __len__(self) -> int:
         try:
-            with tf.GradientTape() as tp:
+            with tf.GradientTape():
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
                     for k in f.keys():
@@ -120,7 +122,7 @@ class Memory:
 
     def __str__(self) -> str:
         try:
-            with tf.GradientTape() as tp:
+            with tf.GradientTape():
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
                     for k in f.keys():
@@ -131,7 +133,7 @@ class Memory:
 
     def __repr__(self) -> str:
         try:
-            with tf.GradientTape() as tp:
+            with tf.GradientTape():
                 _pre_data = {}
                 with safe_open(self._filename, framework="tf") as f:
                     for k in f.keys():

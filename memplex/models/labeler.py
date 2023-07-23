@@ -13,10 +13,6 @@
 #  limitations under the License.
 # =========================================================================
 
-"""
-Labeler Model.
-"""
-
 import tensorflow as tf
 
 from memplex.errors import NonTrainablePart
@@ -25,12 +21,6 @@ from memplex.layers import NonTrainablePReLU, \
 
 
 class Labeler(tf.keras.Model):
-    """
-    Labels the data.
-    Args:
-        name: Name of Labeler model
-    """
-
     def __init__(self, name="labeler"):
         super().__init__(name=name, trainable=False)
         self.space_creator = PoolingAndAverageBasedSpaceCreatorLayer()

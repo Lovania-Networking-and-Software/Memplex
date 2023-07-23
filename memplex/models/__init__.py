@@ -13,8 +13,4 @@
 #  limitations under the License.
 # ===========================================================================
 
-"""
-Models for Memplex
-"""
-
 from memplex.models.labeler import Labeler

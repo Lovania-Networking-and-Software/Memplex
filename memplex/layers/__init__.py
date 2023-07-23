@@ -13,9 +13,5 @@
 #  limitations under the License.
 # ===========================================================================
 
-"""
-Layers for Memplex main model
-"""
-
 from memplex.layers.labeler import NonTrainablePReLU, \
     PoolingAndAverageBasedSpaceCreatorLayer

@@ -13,10 +13,6 @@
 #  limitations under the License.
 # ===========================================================================
 
-"""
-Lauers for Labeler model.
-"""
-
 import tensorflow as tf
 from tensorflow.python.keras import backend, constraints, initializers, regularizers
 from tensorflow.python.keras.utils import tf_utils
@@ -25,39 +21,6 @@ from memplex.errors import NonTrainablePart
 
 
 class NonTrainablePReLU(tf.keras.layers.Layer):
-    """Non-Trainable Parametric Rectified Linear Unit.
-
-    It follows:
-
-    ```
-      f(x) = alpha * x for x < 0
-      f(x) = x for x >= 0
-    ```
-
-    where `alpha` is an unlearned array with the same shape as x.
-
-    Input shape:
-      Arbitrary. Use the keyword argument `input_shape`
-      (tuple of integers, does not include the samples axis)
-      when using this layer as the first layer in a model.
-
-    Output shape:
-      Same shape as the input.
-
-    Args:
-      alpha_initializer: Initializer function for the weights.
-      alpha_regularizer: Regularizer for the weights.
-      alpha_constraint: Constraint for the weights.
-      shared_axes: The axes along which to share learnable
-        parameters for the activation function.
-        For example, if the incoming feature maps
-        are from a 2D convolution
-        with output shape `(batch, height, width, channels)`,
-        and you wish to share parameters across space
-        so that each filter only has one set of parameters,
-        set `shared_axes=[1, 2]`.
-    """
-
     def __init__(
             self,
             alpha_initializer="zeros",
@@ -124,13 +87,6 @@ class NonTrainablePReLU(tf.keras.layers.Layer):
 
 
 class RoundedNorm(tf.keras.layers.Wrapper):
-    """
-    Rounds and normalizes the data.
-    Args:
-        layer: Layer to wrap.
-        name: Name of the layer
-    """
-
     def __init__(self, layer, name="rounded_norm"):
         super().__init__(layer, name=name)
 
@@ -147,12 +103,6 @@ class RoundedNorm(tf.keras.layers.Wrapper):
 
 
 class PoolingAndAverageBasedSpaceCreatorLayer(tf.keras.layers.Layer):
-    """
-    Pools data with two methods, gets averages of pools, and concatenates them.
-    Args:
-        name: Name of the layer
-    """
-
     def __init__(self, name="space_creator"):
         super().__init__(trainable=False, name=name)
         self.pooling_max = tf.keras.layers.GlobalMaxPooling1D(name="pooling_space_max",
