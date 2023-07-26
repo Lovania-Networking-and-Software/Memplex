@@ -13,23 +13,4 @@
 #  limitations under the License.
 # =========================================================================
 
-import unittest
-
-import tensorflow as tf
-
-from memplex import models
-
-
-class LabelerTest(unittest.TestCase):
-    def test_labeler(self):
-        labeler = models.Labeler()
-        labeler.build((3, 3, 3))
-        labeler.summary()
-        base_data = tf.random.uniform((3, 3, 3))
-        data1 = tf.identity(base_data)
-        data2 = tf.identity(base_data) + tf.random.normal((3, 3, 3), mean=0.0, stddev=0.4)
-        self.assertEqual(tf.reduce_mean(labeler(data1)), tf.reduce_mean(labeler(data2)))
-
-
-if __name__ == '__main__':
-    unittest.main()
+from memplex.layers.attention.memory_attention import MemoryAttention

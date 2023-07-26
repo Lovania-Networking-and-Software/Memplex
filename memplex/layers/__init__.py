@@ -13,5 +13,8 @@
 #  limitations under the License.
 # ===========================================================================
 
-from memplex.layers.labeler import NonTrainablePReLU, \
-    PoolingAndAverageBasedSpaceCreatorLayer
+# Labeler layers.
+from memplex.layers.labeler import NonTrainablePReLU, PoolingAndAverageBasedSpaceCreatorLayer
+
+# Attention layers.
+from memplex.layers.attention.memory_attention import MemoryAttention

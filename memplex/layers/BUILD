@@ -14,6 +14,7 @@ py_library(
     deps = [
         ":labeler_layers",
         "//memplex:errors",
+        "//memplex/layers/attention",
     ],
 )
 
