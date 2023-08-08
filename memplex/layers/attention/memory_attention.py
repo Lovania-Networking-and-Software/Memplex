@@ -49,26 +49,23 @@ class MemoryAttention(Attention):
             mask
         )  # Pass 0 as start_pos since it's not used in MemoryAttention
         scores = tf.math.multiply(scores, self.m)
+
         beam_width = scores.shape[2]
-        beam_width_reduction_rate = 0.05 * scores.shape[2]
 
         probabilities = tf.math.softmax(scores)
-        top_k_probabilities, top_k_indices = tf.math.top_k(probabilities, k=int(beam_width))
+        top_k_probabilities, top_k_indices = tf.math.top_k(probabilities, k=beam_width)
 
-        beam_scores = tf.reduce_sum(top_k_probabilities * tf.cast(top_k_indices, dtype=tf.float32),
-                                    axis=1)
+        # Create a tensor of candidate beams, where each beam is a tuple of (score, index).
+        candidate_beams = tf.stack([top_k_probabilities, tf.cast(top_k_indices, tf.float32)],
+                                   axis=1)
 
-        def beam_width_range(start, end, step):
-            numbers = []
-            while start <= end:
-                numbers.append(start)
-                start += step
-            return numbers
+        # Iterate over the beams and select the one with the highest score.
+        for _ in range(beam_width - 1):
+            current_beams = candidate_beams
+            top_k_probabilities, top_k_indices = tf.math.top_k(current_beams[:, 0], k=1)
+            candidate_beams = tf.gather(current_beams, top_k_indices, axis=1)
 
-        for i in beam_width_range(beam_width, 1, -beam_width_reduction_rate):
-            probabilities = tf.math.softmax(beam_scores)
-            top_k_probabilities, top_k_indices = tf.math.top_k(probabilities, k=i)
-            beam_scores = tf.reduce_sum(top_k_probabilities * top_k_indices, axis=1)
+        beam = tf.reshape(candidate_beams[0], (1, -1))
 
-        self.m.assign_add(beam_scores)
+        self.m.assign_add(beam)
         return scores

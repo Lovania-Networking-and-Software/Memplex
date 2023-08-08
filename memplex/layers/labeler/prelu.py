@@ -20,6 +20,8 @@ from memplex.errors import NonTrainablePart
 
 
 class NonTrainablePReLU(tf.keras.layers.Layer):
+    alpha = None
+
     def __init__(
             self,
             alpha_initializer="zeros",

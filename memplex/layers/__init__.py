@@ -14,7 +14,8 @@
 # ===========================================================================
 
 # Labeler layers.
-from memplex.layers.labeler.labeler import NonTrainablePReLU, PoolingAndAverageBasedSpaceCreatorLayer
+from memplex.layers.labeler.labeler import NonTrainablePReLU, \
+    PoolingAndAverageBasedSpaceCreatorLayer
 
 # Attention layers.
 from memplex.layers.attention.memory_attention import MemoryAttention

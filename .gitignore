@@ -111,3 +111,4 @@ bazel.py
 /bazel-testlogs/
 /.ijwb/
 /bazel-bin/
+/qodana.yaml

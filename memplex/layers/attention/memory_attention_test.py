@@ -24,8 +24,10 @@ class MemoryAttentionTest(unittest.TestCase):
     def test_attention(self):
         attention = MemoryAttention(1, 1, 4, 1, 1)
         data = tf.random.uniform([1, 1, 4])
-        print(attention(data))
-        print(attention(data))
+        x1 = attention(data)
+        x2 = attention(data)
+        print(x1)
+        print(x2)
 
 
 if __name__ == '__main__':

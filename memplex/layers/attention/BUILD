@@ -18,12 +18,6 @@ py_library(
 )
 
 py_library(
-    name = "base_dense_attention",
-    srcs = ["base_dense_attention.py"],
-    srcs_version = "PY3",
-)
-
-py_library(
     name = "memory_attention",
     srcs = ["memory_attention.py"],
     srcs_version = "PY3",
