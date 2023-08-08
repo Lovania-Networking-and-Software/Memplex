@@ -22,7 +22,7 @@ py_library(
     srcs = ["labeler.py"],
     srcs_version = "PY3",
     deps = [
-        "//memplex/layers",
+        "//memplex/layers/labeler",
     ],
 )
 

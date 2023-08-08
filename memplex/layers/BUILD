@@ -12,14 +12,7 @@ py_library(
     ],
     srcs_version = "PY3",
     deps = [
-        ":labeler_layers",
-        "//memplex:errors",
         "//memplex/layers/attention",
+        "//memplex/layers/labeler",
     ],
-)
-
-py_library(
-    name = "labeler_layers",
-    srcs = ["labeler.py"],
-    srcs_version = "PY3",
 )

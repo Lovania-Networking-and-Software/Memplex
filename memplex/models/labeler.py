@@ -16,7 +16,7 @@
 import tensorflow as tf
 
 from memplex.errors import NonTrainablePart
-from memplex.layers import NonTrainablePReLU, \
+from memplex.layers.labeler import NonTrainablePReLU, \
     PoolingAndAverageBasedSpaceCreatorLayer
 
 

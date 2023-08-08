@@ -23,10 +23,10 @@ class MemoryTest(unittest.TestCase):
     def test_memory(self):
         labeler = models.Labeler()
         base_data = tf.random.uniform((3, 3, 3))
-        mean = float(tf.reduce_mean(labeler(base_data).numpy()))
+        label = str(labeler(base_data))
         memory = utils.Memory()
-        memory[str(mean)] = base_data
-        self.assertEqual(tf.reduce_mean(base_data), tf.reduce_mean(memory[str(mean)]))
+        memory[label] = base_data
+        self.assertEqual(tf.reduce_mean(base_data), tf.reduce_mean(memory[label]))
 
 
 if __name__ == '__main__':

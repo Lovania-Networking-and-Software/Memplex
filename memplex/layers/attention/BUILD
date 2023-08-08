@@ -6,14 +6,14 @@ package(
 )
 
 py_library(
-    name = "attention",
+    name = "attention_layers",
     srcs = [
         "__init__.py",
     ],
     srcs_version = "PY3",
     deps = [
+        ":attention",
         ":memory_attention",
-        "//memplex:errors",
     ],
 )
 
@@ -28,8 +28,14 @@ py_library(
     srcs = ["memory_attention.py"],
     srcs_version = "PY3",
     deps = [
-        ":base_dense_attention",
+        ":attention",
     ],
+)
+
+py_library(
+    name = "attention",
+    srcs = ["attention.py"],
+    srcs_version = "PY3",
 )
 
 py_test(

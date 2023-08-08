@@ -1,0 +1,130 @@
+#  Copyright 2023 Lovania Networking and Software
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+# =========================================================================
+
+import tensorflow as tf
+
+def repeat_kv(
+        x: tf.Tensor,
+        n_rep: int
+) -> tf.Tensor:
+    """tf.repeat(x, repeats=n_rep, axis=2)"""
+    bs, slen, n_kv_heads, head_dim = x.shape
+    if n_rep == 1:
+        return x
+    return tf.reshape(
+        tf.tile(tf.expand_dims(x, axis=3), [1, 1, 1, n_rep, 1]),
+        [bs, slen, n_kv_heads * n_rep, head_dim]
+    )
+
+
+class Attention(tf.keras.layers.Layer):
+    def __init__(
+            self,
+            n_heads,
+            n_kv_heads,
+            dim,
+            max_batch_size,
+            max_seq_len
+    ):
+        super(Attention, self).__init__()
+        self.n_kv_heads = n_heads if n_kv_heads is None else n_kv_heads
+        self.n_local_heads = n_heads
+        self.n_local_kv_heads = self.n_kv_heads
+        self.n_rep = self.n_local_heads // self.n_local_kv_heads
+        self.head_dim = dim // n_heads
+
+        self.wq = tf.keras.layers.Dense(
+            n_heads * self.head_dim,
+            use_bias=False,
+            kernel_initializer=tf.keras.initializers.identity(),
+        )
+        self.wk = tf.keras.layers.Dense(
+            self.n_kv_heads * self.head_dim,
+            use_bias=False,
+            kernel_initializer=tf.keras.initializers.identity(),
+        )
+        self.wv = tf.keras.layers.Dense(
+            self.n_kv_heads * self.head_dim,
+            use_bias=False,
+            kernel_initializer=tf.keras.initializers.identity(),
+        )
+        self.wo = tf.keras.layers.Dense(
+            dim,
+            use_bias=False,
+            input_shape=(n_heads * self.head_dim,),
+            kernel_initializer=tf.keras.initializers.identity(),
+        )
+
+        self.cache_k = tf.Variable(
+            tf.zeros(
+                (
+                    max_batch_size,
+                    max_seq_len,
+                    self.n_local_kv_heads,
+                    self.head_dim,
+                )
+            ),
+            trainable=False,
+        )
+        self.cache_v = tf.Variable(
+            tf.zeros(
+                (
+                    max_batch_size,
+                    max_seq_len,
+                    self.n_local_kv_heads,
+                    self.head_dim,
+                )
+            ),
+            trainable=False,
+        )
+
+    def call(
+            self,
+            x,
+            start_pos,
+            mask=None,
+    ):
+        bsz, seqlen, _ = x.shape.as_list()
+        xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
+
+        xq = tf.reshape(xq, (bsz, seqlen, self.n_local_heads, self.head_dim))
+        xk = tf.reshape(xk, (bsz, seqlen, self.n_local_kv_heads, self.head_dim))
+        xv = tf.reshape(xv, (bsz, seqlen, self.n_local_kv_heads, self.head_dim))
+
+        self.cache_k = self.cache_k.assign(xq)
+        self.cache_v = self.cache_v.assign(xq)
+
+        self.cache_k[:bsz, start_pos: start_pos + seqlen].assign(xk)
+        self.cache_v[:bsz, start_pos: start_pos + seqlen].assign(xv)
+
+        keys = self.cache_k[:bsz, : start_pos + seqlen]
+        values = self.cache_v[:bsz, : start_pos + seqlen]
+
+        # repeat k/v heads if n_kv_heads < n_heads
+        keys = repeat_kv(keys, self.n_rep)  # (bs, seqlen, n_local_heads, head_dim)
+        values = repeat_kv(values, self.n_rep)  # (bs, seqlen, n_local_heads, head_dim)
+
+        xq = tf.transpose(xq, perm=[0, 2, 1, 3])  # (bs, n_local_heads, seqlen, head_dim)
+        keys = tf.transpose(keys, perm=[0, 2, 1, 3])
+        values = tf.transpose(values, perm=[0, 2, 1, 3])
+        scores = tf.matmul(xq, tf.transpose(keys, perm=[0, 1, 3, 2])) / tf.sqrt(
+            tf.cast(self.head_dim, tf.float32))
+        if mask is not None:
+            scores = scores + mask  # (bs, n_local_heads, seqlen, cache_len + seqlen)
+        scores = tf.nn.softmax(scores, axis=-1)
+        output = tf.matmul(scores, values)  # (bs, n_local_heads, seqlen, head_dim)
+        output = tf.transpose(output, perm=[0, 2, 1, 3])
+        output = tf.reshape(output, (bsz, seqlen, -1))
+        return self.wo(output)

@@ -12,21 +12,3 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # =========================================================================
-
-import unittest
-
-import tensorflow as tf
-
-from memplex.layers.attention.memory_attention import MemoryAttention
-
-
-class MemoryAttentionTest(unittest.TestCase):
-    def test_attention(self):
-        attention = MemoryAttention(1, 1, 4, 1, 1)
-        data = tf.random.uniform([1, 1, 4])
-        print(attention(data))
-        print(attention(data))
-
-
-if __name__ == '__main__':
-    unittest.main()
