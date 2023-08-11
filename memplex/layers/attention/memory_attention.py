@@ -43,16 +43,13 @@ class MemoryAttention(Attention):
             x,
             mask=None,
     ):
-        scores = super().call(
-            x,
-            0,
-            mask
-        )  # Pass 0 as start_pos since it's not used in MemoryAttention
+        # Pass 0 as start_pos since it's not used in MemoryAttention
+        scores = super().call(x, 0, mask)
         scores = tf.math.multiply(scores, self.m)
 
         beam_width = scores.shape[2]
 
-        probabilities = tf.math.softmax(scores)
+        probabilities = tf.math.log_softmax(scores)
         top_k_probabilities, top_k_indices = tf.math.top_k(probabilities, k=beam_width)
 
         # Create a tensor of candidate beams, where each beam is a tuple of (score, index).
@@ -61,9 +58,8 @@ class MemoryAttention(Attention):
 
         # Iterate over the beams and select the one with the highest score.
         for _ in range(beam_width - 1):
-            current_beams = candidate_beams
-            top_k_probabilities, top_k_indices = tf.math.top_k(current_beams[:, 0], k=1)
-            candidate_beams = tf.gather(current_beams, top_k_indices, axis=1)
+            top_k_probabilities, top_k_indices = tf.math.top_k(candidate_beams[:, 0], k=1)
+            candidate_beams = tf.gather(candidate_beams, top_k_indices, axis=1)
 
         beam = tf.reshape(candidate_beams[0], (1, -1))
 
