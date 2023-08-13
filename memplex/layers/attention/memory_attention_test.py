@@ -12,9 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # =========================================================================
-import random
 import unittest
 
+import numpy as np
 import tensorflow as tf
 
 from memplex.layers.attention.memory_attention import MemoryAttention
@@ -22,9 +22,8 @@ from memplex.layers.attention.memory_attention import MemoryAttention
 
 class MemoryAttentionTest(unittest.TestCase):
     def test_attention(self):
-        attention = MemoryAttention(1, 1, 4, 1, 1)
-        data = tf.ones([1, 1, 4])
-        print(data)
+        attention = MemoryAttention(1, 1, 4, 4, 4)
+        data = tf.ones([4, 4, 4])
         x1 = attention(data)
         x2 = attention(data)
         print(x1)
