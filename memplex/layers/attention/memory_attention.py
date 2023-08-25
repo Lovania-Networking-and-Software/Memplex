@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # =========================================================================
-
+import numpy as np
 import tensorflow as tf
 from keras.utils import conv_utils
 from tensorflow.python.keras.utils import tf_utils
@@ -21,39 +21,34 @@ from memplex.layers.attention.attention import Attention
 
 
 class MemoryAttention(Attention):
-    m = None
-    mCache = None
-    depthwise_kernel = None
-
-    def __init__(
-            self,
-            n_heads,
-            n_kv_heads,
-            dim,
-            max_batch_size,
-            max_seq_len
-    ):
-        super().__init__(n_heads, n_kv_heads, dim, max_batch_size, max_seq_len)
 
     @tf_utils.shape_type_conversion
     def build(
             self,
             input_shape
     ):
-        beam_shape = self.compute_beam_shape(input_shape)
-        self.m = self.add_weight(
-            "memory",
-            [beam_shape[0], 1, beam_shape[2]],
-            initializer=tf.keras.initializers.GlorotNormal(),
+        self.beam_rift_space = self.add_weight(
+            "beams",
+            [input_shape[2], input_shape[0], input_shape[1], input_shape[2]],
+            initializer=tf.keras.initializers.Zeros(),
             regularizer=tf.keras.regularizers.OrthogonalRegularizer(),
             trainable=False
         )
-        self.mCache = self.add_weight(
-            "memory_cache",
+        beam_shape = self.compute_beam_shape(input_shape)
+        print(beam_shape)
+        self.m = self.add_weight(
+            "memory",
             input_shape,
-            initializer=tf.keras.initializers.GlorotNormal(),
+            initializer=tf.keras.initializers.Orthogonal(),
             regularizer=tf.keras.regularizers.OrthogonalRegularizer(),
             trainable=False
+        )
+        self.m_cache = self.add_weight(
+            "memory_cache",
+            input_shape,
+            initializer=tf.keras.initializers.Zeros(),
+            regularizer=tf.keras.regularizers.OrthogonalRegularizer(),
+            trainable=True
         )
 
         kernel_size = conv_utils.normalize_tuple(
@@ -62,12 +57,12 @@ class MemoryAttention(Attention):
         input_dim = int(beam_shape[-1])
         depthwise_kernel_shape = kernel_size + (
             input_dim,
-            1,
+            1
         )
 
         self.depthwise_kernel = self.add_weight(
             shape=depthwise_kernel_shape,
-            initializer=tf.keras.initializers.GlorotNormal(),
+            initializer=tf.keras.initializers.GlorotUniform(),
             name="depthwise_kernel",
             regularizer=None,
             constraint=None,
@@ -77,94 +72,87 @@ class MemoryAttention(Attention):
         super().build(input_shape)
 
     def compute_beam_shape(self, input_shape):
-        sample = tf.ones(input_shape)
-        abs_shape = float(sample.shape[0] * sample.shape[1] * sample.shape[2])
-        abs_shape = tf.math.abs(abs_shape // tf.math.sqrt(abs_shape))
-        abs_const_val = tf.math.abs(2 * abs_shape)
-        side_constraint = tf.keras.constraints.MinMaxNorm(
-            -abs_const_val,
-            abs_const_val,
-            axis=1
-        )
-        sample = side_constraint(sample)
-        beam_width = sample.shape[2]
-
-        probabilities = tf.nn.log_softmax(sample)
-        top_k_probabilities, top_k_indices = tf.nn.top_k(probabilities, k=beam_width)
-
-        for _ in range(beam_width - 1):
-            top_k_probabilities, top_k_indices = tf.nn.top_k(top_k_probabilities, k=1)
-        candidate_beams = tf.squeeze(tf.gather(top_k_probabilities, top_k_indices, axis=1))
-
-        if candidate_beams.shape.rank < 3:
-            for i in range(3 - candidate_beams.shape.rank):
-                candidate_beams = tf.expand_dims(candidate_beams, i)
+        candidate_beams = self.beam_rift(tf.ones(input_shape), shape_computing=True)
         return candidate_beams.shape
 
-    def update_memory(self, w):
-        self.mCache.assign_add(w)
+    def beam_rift(self, x, shape_computing=False):
+        beam_width = x.shape[2]
 
-        abs_shape = float(self.mCache.shape[0] * self.mCache.shape[1] * self.mCache.shape[2])
-        abs_shape = tf.math.abs(abs_shape // tf.math.sqrt(abs_shape))
-        abs_const_val = tf.math.abs(2 * abs_shape)
-        side_constraint = tf.keras.constraints.MinMaxNorm(
-            -abs_const_val,
-            abs_const_val,
-            axis=1
-        )
-        m_cache = side_constraint(self.mCache)
-        beam_width = self.mCache.shape[2]
+        probabilities = tf.nn.log_softmax(x)
 
-        probabilities = tf.nn.log_softmax(m_cache)
         top_k_probabilities, top_k_indices = tf.nn.top_k(probabilities, k=beam_width)
 
-        # Iterate over the beams and select the one with the highest score.
-        for _ in range(beam_width - 1):
+        for bi in range(beam_width):
+            old_top_k_probabilities = top_k_probabilities
             top_k_probabilities, top_k_indices = tf.nn.top_k(top_k_probabilities, k=1)
+            if not shape_computing:
+                if bi > 0:
+                    self.beam_rift_space[bi].assign(
+                        tf.nn.log_softmax(top_k_probabilities * self.beam_rift_space[bi - 1])
+                    )
+                else:
+                    self.beam_rift_space[bi].assign(
+                        tf.nn.log_softmax(top_k_probabilities * old_top_k_probabilities)
+                    )
+        top_k_probabilities = top_k_probabilities * tf.reduce_sum(self.beam_rift_space, axis=0)
+
         candidate_beams = tf.squeeze(tf.gather(top_k_probabilities, top_k_indices, axis=1))
 
-        if candidate_beams.shape.rank < 3:
-            for i in range(3 - candidate_beams.shape.rank):
+        if candidate_beams.shape.rank < 4:
+            for i in range(4 - candidate_beams.shape.rank):
                 candidate_beams = tf.expand_dims(candidate_beams, i)
 
-        dilation_rate = conv_utils.normalize_tuple(
-            1, 1, "dilation_rate"
+        return candidate_beams
+
+    def update_memory(self, w):
+        self.m_cache.assign_add(w)
+        candidate_beams = self.beam_rift(self.m_cache)
+
+        def cell(beam, memory_state):
+            memory_state = memory_state[0]
+            dilation_rate = conv_utils.normalize_tuple(
+                1, 1, "dilation_rate"
+            )
+            dilation_rate = (1,) + dilation_rate
+
+            spatial_start_dim = 1
+
+            strides = conv_utils.normalize_tuple(
+                beam.shape[2], 1, "strides", allow_zero=True
+            )
+
+            beam = tf.expand_dims(beam, spatial_start_dim)
+            depthwise_kernel = tf.expand_dims(self.depthwise_kernel, axis=0)
+
+            output = tf.nn.depthwise_conv2d(
+                beam,
+                depthwise_kernel,
+                strides=(1,) + strides * 2 + (1,),
+                padding=conv_utils.normalize_padding("valid").upper(),
+                dilations=dilation_rate,
+                data_format=conv_utils.convert_data_format(
+                    conv_utils.normalize_data_format("channels_last"), ndim=4
+                ),
+            )
+
+            output = tf.squeeze(output, spatial_start_dim)
+            memory_state = (memory_state + (output * memory_state) /
+                            (tf.reduce_sum(output, axis=1) * tf.reduce_sum(memory_state, axis=1)))
+            return output, [memory_state]
+
+        _, _, memory = tf.keras.backend.rnn(
+            cell,
+            candidate_beams,
+            [self.m]
         )
-        dilation_rate = (1,) + dilation_rate
 
-        spatial_start_dim = 1
-
-        inputs = tf.expand_dims(candidate_beams, spatial_start_dim)
-
-        strides = conv_utils.normalize_tuple(
-            candidate_beams.shape[2], 1, "strides", allow_zero=True
-        )
-
-        depthwise_kernel = tf.expand_dims(self.depthwise_kernel, axis=0)
-
-        # Apply depthwise convolution to get outputs
-        outputs = tf.nn.depthwise_conv2d(
-            inputs,
-            depthwise_kernel,
-            strides=(1,) + strides * 2 + (1,),
-            padding=conv_utils.normalize_padding("valid").upper(),
-            dilations=dilation_rate,
-            data_format=conv_utils.convert_data_format(
-                conv_utils.normalize_data_format("channels_last"), ndim=4
-            ),
-        )
-
-        # Reshape outputs to match the shape of self.m
-        outputs = tf.squeeze(outputs, [spatial_start_dim])
-
-        self.m.assign(outputs)
+        self.m.assign(memory[0])
 
     def call(
             self,
             x,
             mask=None,
     ):
-        # Pass 0 as start_pos since it's not used in MemoryAttention
         scores = super().call(x, 0, mask)
         scores = tf.math.multiply(scores, self.m)
 
