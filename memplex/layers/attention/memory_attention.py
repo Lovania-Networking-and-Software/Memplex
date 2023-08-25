@@ -35,7 +35,6 @@ class MemoryAttention(Attention):
             trainable=False
         )
         beam_shape = self.compute_beam_shape(input_shape)
-        print(beam_shape)
         self.m = self.add_weight(
             "memory",
             input_shape,
